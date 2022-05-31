@@ -21,7 +21,7 @@ private:
 
     Node* hashTable[MAX_SIZE];
 
-    ull toHash(const char* str);
+    ull toHash(char* str);
     int toHashedKey(ull value);
 
 public:

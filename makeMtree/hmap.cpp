@@ -1,12 +1,16 @@
 #include "hmap.h"
 
-ull HMAP::toHash(const char* str) {
+ull HMAP::toHash(char* str) {
     int c = 0;
-    ull value = 5381;
+    ull value = 26;
 
-    while (c = *str++) {
+    while ((c = *str++) != '\0') {
+        //printf("c: %d\n", c);
         value = ((value << 5) + value) + c;
+        //printf("value: %ull\n", value);
     }
+
+    
 
     return value;
 }
@@ -49,10 +53,10 @@ int HMAP::find(char* key){
 
 void HMAP::print() {
     Node* ptr;
-    for (int i = 0; i < MAX_DATA; i++) {
+    for (int i = 0; i < MAX_SIZE; i++) {
         ptr = hashTable[i];
         while (ptr != NULL) {
-            printf("%lld ", ptr->value);
+            printf("%ull ", ptr->value);
             ptr = ptr->next;
         }
         if (ptr != hashTable[i]) printf("\n");
