@@ -1,14 +1,15 @@
 ﻿#include <stdio.h>
 #include "hmap.h"
+#include "block.h"
 
 int main()
 {
-    HMAP h;
+    block b;
 
-    char data[4] = {'a','b','c', '\0'};
-    char data2[4] = { 'b','b','c','\0'};
-    h.add(data);
-    h.add(data2);
-    h.print();
+    uint8_t data[] = {'c','b','c', '\0'};
+    uint8_t data2[] = { 'b','b','c','\0'};
+    b.add(data,1);
+    b.add(data2,2);
+    b.add(data, 3);
 
 }
