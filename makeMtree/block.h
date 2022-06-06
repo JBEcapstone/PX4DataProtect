@@ -53,18 +53,29 @@ public:
 
 
 private:
-	// tree: tree의 노드값, sess: 탐색시 현재 노드 위치
-	Node* tree, sess = {0,0};
+	// tree: tree의 노드값
+	Node* tree;
 
 	//treesize: tree 크기, next_node: tree 구성시 다음으로 추가될 노드 인덱스
 	int treesize, next_node;
-	uint8_t block_num = -1;
+
+	/*
+		블록 정보
+		block_timestamp: 블록이 만들어진 시간
+		previous_hash: 이전 블럭의 해시값
+		merkle_root: 머클 트리의 루트값
+	*/
+	uint8_t block_timstamp = -1;
 	uint32_t previous_hash = -1;
 	uint8_t *merkle_root;
+
+	//해시를 위한 구조체
 	SHA256_INFO sha;
 
 /*
 	머클 트리 빌드
+	@input: -
+	@output: -
 */
 	void build_m_tree();
 
@@ -75,5 +86,13 @@ private:
 */
 	int search(uint32_t timestamp);
 
+/*
+	구간 합을 구하기 위해 노드 탐색
+	@input:		start,end:		시작과 끝 인덱스
+				index:			현재 인덱스
+				left, right:	구간 합의 전체 범위
+	@output:	블록 내 리프 노드의 순서(0~(DATA_NUM-1))
+*/
+	int interval_sum(int start, int end, int index, int left, int right)
 };
 
