@@ -15,5 +15,12 @@ int main()
         b.add(data[i], i + 1);
     }
     
-   printf("%d번째 노드 검증결과: %d\n",1,  b.verify(1, data[0]));
+    uint8_t nisemono[10] = { 'a','b','c','d','e','f','g','h','f','\0' };
+
+    printf("%d번째 노드 검증결과: %d\n", 25, b.verify(25, data[24]));
+    printf("%d번째 노드 검증결과: %d\n", 25, b.verify(25, nisemono));
+   
+  /* for (int i = 0; i <= 256; i++) {
+       printf("%d번째 노드 검증결과: %d\n", i+1, b.verify(i+1, data[i]));
+   }*/
 }
