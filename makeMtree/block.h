@@ -13,10 +13,11 @@ class block
 public:
 	struct Node {
 		uint32_t timestamp;
-		uint8_t* hmac;
+		uint8_t hmac[SHA256_DIGEST_VALUELEN+1];
 
 		Node* operator=(Node* other) {
-			this->hmac = other->hmac;
+			for(int i = 0 ; i<SHA256_DIGEST_BLOCKLEN;i++)hmac[i] = other->hmac[i];
+
 			this->timestamp = other->timestamp;
 		}
 	};
@@ -47,22 +48,25 @@ public:
 	int add(uint8_t data[], uint32_t timestamp) {
 
 		printf("data: %s, node: %d\n", data,next_node);
-		if (next_node == DATA_NUM + 1) {
+		if (next_node == treesize) {
 			
 			build_m_tree();
 			return 0;
 		}
 
 		uint8_t* enc = (uint8_t*)malloc(sizeof(uint8_t)* (SHA256_DIGEST_VALUELEN + 1));
-		SHA256_Encrpyt(data, sizeof(data), enc);
+		SHA256_Encrpyt(data, sizeof(data)/sizeof(uint8_t), enc);
 		enc[SHA256_DIGEST_VALUELEN] = '\0';
-		printf("plain:%s, hmac: %s\n",data, enc);
+		//printf("plain:%s, hmac: %s\n",data, enc);
 
-
-		tree[next_node].hmac = enc;
+		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+			tree[next_node].hmac[i] = enc[i];
+		}
+		
+		tree[next_node].hmac[SHA256_DIGEST_VALUELEN] = '\0';
 		tree[next_node].timestamp = timestamp;
 
-		printf("node(%d): %s\n", next_node,tree[next_node].hmac);
+		printf("node(%d): %s\n=================\n", next_node,tree[next_node].hmac);
 		/*for (int i = 0; i < 32; i++) {
 			printf("(%d) %c", i, enc[i]);
 		}
@@ -75,7 +79,7 @@ public:
 
 	// 머클 트리 빌드
 	void build_m_tree() {
-		int makenode = (DATA_NUM-2)/2, front, rear;
+		int makenode = treesize - 1 - DATA_NUM, front, rear;
 		uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
 		uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
 
@@ -83,28 +87,31 @@ public:
 
 			front = makenode * 2 + 1;
 			rear = makenode * 2 + 2;
-
-			printf("front(%d): %s, rear(%d): %s\n", front,tree[front].hmac, rear,tree[rear].hmac);
+			printf("\n=============\nmakenode: %d\n", makenode);
+			//printf("front(%d): %s, rear(%d): %s\n", front,tree[front].hmac, rear,tree[rear].hmac);
 
 			for (int i = 0; i < SHA256_DIGEST_VALUELEN * 2; i++) {
 				if (i < SHA256_DIGEST_VALUELEN) hash_concat[i] = tree[front].hmac[i];
-				else hash_concat[i] = tree[rear].hmac[i - 32];
+				else hash_concat[i] = tree[rear].hmac[i - SHA256_DIGEST_VALUELEN];
 			}
 
 			hash_concat[SHA256_DIGEST_VALUELEN * 2] = '\0';
-			printf("hash_concat:%s \n", hash_concat);
+			//printf("hash_concat:%s \n", hash_concat);
 			
 			SHA256_Encrpyt(hash_concat, 64, digest);
 			digest[SHA256_DIGEST_VALUELEN] = '\0';
 			
-			tree[makenode].hmac = digest;
+			for(int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+				tree[makenode].hmac[i] = digest[i];
+			}
+			tree[makenode].hmac[SHA256_DIGEST_VALUELEN] = '\0';
 			tree[makenode].timestamp = 0;
 			printf("digest: %s\n", tree[makenode].hmac);
 
 			makenode -= 1;
 
 			//to test
-			if (makenode != 127) break;
+			//if (makenode != 127) break;
 		}
 
 		merkle_root = tree[0].hmac;
@@ -112,13 +119,86 @@ public:
 	}
 
 	//노드 찾기
-	void search(uint32_t timestamp) {
-
+	//리프노드의 순서 return(0 ~ DATA_NUM - 1)
+	int search(uint32_t timestamp) {
+		int front = DATA_NUM - 1;
+		int rear = treesize - 1;
+		int mid;
+		while (front <= rear) {
+			mid = (front + rear) / 2;
+			if (tree[mid].timestamp < timestamp) {
+				front = mid + 1;
+			}
+			else if(tree[mid].timestamp > timestamp) {
+				rear = mid - 1;
+			}
+			else {
+				printf("mid: %d\n", mid);
+				return mid - (DATA_NUM - 1);
+			}
+		}
+		return -1;
 	}
 
 	// 위변조 검증
-	void verify(uint32_t timestamp) {
+	int verify(uint32_t timestamp, uint8_t data[]) {
 
+		int idx = search(timestamp);
+		uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
+		uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
+
+		//우선 리프 노드 해시값 확인
+		SHA256_Encrpyt(data, sizeof(data)/sizeof(uint8_t), digest);
+		digest[SHA256_DIGEST_VALUELEN] = '\0';
+
+		if (strcmp((char*)digest, (char*)tree[(DATA_NUM - 1) + idx].hmac)) {
+			printf("digest: %s, tree[%d]: %s\n", digest, idx, tree[(DATA_NUM - 1) + idx].hmac);
+			return -1;
+		}
+
+		//트리 거슬러 올라가며 확인
+		int front, rear, cur = (DATA_NUM - 1) + idx;
+		
+		while (1) {
+			if (cur % 2) {
+				front = cur;
+				rear = cur + 1;
+			}
+			else {
+				front = cur - 1;
+				rear = cur;
+			}
+
+			cur = (front - 1) / 2;
+			
+
+			for (int i = 0; i < SHA256_DIGEST_VALUELEN * 2; i++) {
+				if (i < SHA256_DIGEST_VALUELEN) hash_concat[i] = tree[front].hmac[i];
+				else hash_concat[i] = tree[rear].hmac[i - SHA256_DIGEST_VALUELEN];
+			}
+
+			hash_concat[SHA256_DIGEST_VALUELEN * 2] = '\0';
+
+			SHA256_Encrpyt(hash_concat, SHA256_DIGEST_VALUELEN*2, digest);
+			printf("front(%d): %s, rear(%d): %s\n", front, tree[front].hmac,rear, tree[rear].hmac);
+			printf("concat: %s\n", hash_concat);
+			digest[SHA256_DIGEST_VALUELEN] = '\0';
+
+			if (strcmp((char*)digest, (char*)tree[cur].hmac)) {
+				printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
+				return -1;
+			}
+
+			if (!cur) break;
+		}
+
+		//root 값과 비교
+		if (strcmp((char*)digest, (char*)merkle_root)) {
+			printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
+			return -1;
+		}
+		
+		return 1;
 	}
 
 	// 위변조 검증(구간)
