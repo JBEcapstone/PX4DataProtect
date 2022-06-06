@@ -14,11 +14,21 @@ int main()
 
         b.add(data[i], i + 1);
     }
+
+
+    uint8_t *data2[5];
+    for (int i = 0; i < 6; i++) {
+        data2[i] = (uint8_t *)malloc(sizeof(uint8_t)*10);
+        for (int j = 0; j < 10; j++) {
+            data2[i][j] = data[i + 23][j];
+        }
+        
+    }
     
     uint8_t nisemono[10] = { 'a','b','c','d','e','f','g','h','f','\0' };
 
-    printf("%d번째 노드 검증결과: %d\n", 25, b.verify(25, data[24]));
-    printf("%d번째 노드 검증결과: %d\n", 25, b.verify(25, nisemono));
+    printf("%d~%d번째 노드 검증결과: %d\n", 25,30, b.verify(25,30, data2));
+    //printf("%d번째 노드 검증결과: %d\n", 25, b.verify(25, nisemono));
    
   /* for (int i = 0; i <= 256; i++) {
        printf("%d번째 노드 검증결과: %d\n", i+1, b.verify(i+1, data[i]));

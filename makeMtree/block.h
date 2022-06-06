@@ -5,9 +5,11 @@
 #include<stdio.h>
 #include "KISA_SHA256.h"
 
-//#define DEBUG 1
+
 const int DATA_NUM = 256;
 const int TIMESET = 100;
+
+//typedef unsigned char uint8_t;
 
 class block
 {
@@ -16,8 +18,8 @@ public:
 		uint32_t timestamp;
 		uint8_t hmac[SHA256_DIGEST_VALUELEN + 1];
 
-		Node* operator=(Node* other) {
-			for (int i = 0; i < SHA256_DIGEST_BLOCKLEN; i++)hmac[i] = other->hmac[i];
+		Node operator=(Node* other) {
+			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++)hmac[i] = other->hmac[i];
 			hmac[SHA256_DIGEST_VALUELEN] = '\0';
 
 			this->timestamp = other->timestamp;
@@ -86,5 +88,5 @@ private:
 		@output:	블록 내 리프 노드의 순서(0~(DATA_NUM-1))
 	*/
 	int search(uint32_t timestamp);
-}
+};
 
