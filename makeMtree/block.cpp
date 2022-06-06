@@ -213,10 +213,96 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 	return 1;
 }
 
-void block::verify(uint32_t time_start, uint32_t time_end){
+int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
+	if ((sess = (Node*)malloc(sizeof(Node) * treesize)) != NULL) {
+		return;
+	}
 
-}
+	int idx_start = search(time_start);
+	int idx_end = search(time_end);
+	int idx, front, rear;
+	uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
+	uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
 
-int block::interval_sum(int start, int end, int inde, int left, int right) {
+	if (idx_start<0 || idx_start>DATA_NUM || idx_end<0 || idx_end>DATA_NUM || idx_start > idx_end) {
+		return -1;
+	}
 
+	//리프 노드들 확인
+	for (int i = idx_start; i <= idx_end; i++) {
+		idx = idx_start + (DATA_NUM - 1);
+		SHA256_Encrpyt(data[idx], sizeof(data[idx]) / sizeof(uint8_t), digest);
+		digest[SHA256_DIGEST_VALUELEN] = '\0';
+
+		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+			sess[idx].hmac[i] = digest[i];
+		}
+		sess[idx].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+		sess[idx].timestamp = 0;
+#ifdef DEBUG
+		printf("digest: %s\n", sess[idx].hmac);
+#endif // DEBUG
+		
+	}
+
+	front = idx_start + (DATA_NUM - 1);
+	rear = idx_end; +(DATA_NUM - 1);
+
+	while (front && rear) {
+		if (front % 2) front = (front - 1) / 2;
+		else {
+			sess[front - 1] = tree[front - 1];
+			front = (front - 2) / 2;
+		}
+
+		if (rear % 2) {
+			sess[rear + 1] = tree[rear + 1];
+			rear = (rear - 1) / 2;
+		}
+		else rear = (rear - 2) / 2;
+
+		for (int cur = front; cur <= rear; cur++) {
+			for (int j = 0; j < SHA256_DIGEST_VALUELEN * 2; j++) {
+				if (j < SHA256_DIGEST_VALUELEN) hash_concat[j] = sess[cur * 2 + 1].hmac[j];
+				else hash_concat[j] = sess[cur * 2 + 2].hmac[j - SHA256_DIGEST_VALUELEN];
+			}
+
+			hash_concat[SHA256_DIGEST_VALUELEN * 2] = '\0';
+
+			SHA256_Encrpyt(hash_concat, SHA256_DIGEST_VALUELEN * 2, digest);
+#ifdef DEBUG
+			printf("front(%d): %s, rear(%d): %s\n", front, sess[front].hmac, rear, sess[rear].hmac);
+			printf("concat: %s\n", hash_concat);
+#endif // DEBUG
+
+
+			digest[SHA256_DIGEST_VALUELEN] = '\0';
+
+			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+				sess[cur].hmac[i] = digest[i];
+			}
+			sess[cur].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+			sess[cur].timestamp = 0;
+
+		}
+		
+	}
+
+
+		
+		// root 값과 비교
+		if (strcmp((char*)sess[0].hmac, (char*)merkle_root)) {
+#ifdef DEBUG
+			printf("merkle root: %s, sess[0]: %s\n", merkle_root, sess[0].hmac);
+#endif // DEBUG
+
+			delete[] sess;
+			return -1;
+		}
+	
+	delete[] sess;
+	return 1;
+	
+
+	
 }
