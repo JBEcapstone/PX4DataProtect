@@ -1,5 +1,5 @@
 #include "block.h"
-#define DEBUG  1;
+//#define DEBUG  1;
 block::block() {
 
 	//트리 크기 설정
@@ -215,8 +215,10 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 	if ((sess = (Node*)malloc(sizeof(Node) * treesize)) != NULL) {
+		
+	}
+	else {
 		printf("할당 실패\n");
-		//return -1;
 	}
 
 	int idx_start = search(time_start);
@@ -248,7 +250,6 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 
 	front = idx_start + (DATA_NUM - 1);
 	rear = idx_end +(DATA_NUM - 1);
-	printf("front %d rear %d", front, rear);
 	while (front && rear) {
 		if (front % 2) front = (front - 1) / 2;
 		else {
@@ -291,19 +292,15 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 		}
 		
 	}
-
-
 		
 	// root 값과 비교
 	if (strcmp((char*)sess[0].hmac, (char*)merkle_root)) {
 #ifdef DEBUG
 		printf("merkle root: %s, sess[0]: %s\n", merkle_root, sess[0].hmac);
 #endif // DEBUG
-
 		delete[] sess;
 		return -1;
 	}
-	
 	delete[] sess;
 	return 1;
 	
