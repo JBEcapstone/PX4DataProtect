@@ -1,22 +1,7 @@
 #include "block.h"
 #define DEBUG  1;
 
-int Strcmp(uint8_t a[], uint8_t b[], int size) {
-	for (int i = 0; i < size; i++) {
-		if (a[i] > b[i]) return 1;
-		else if (a[i] < b[i]) return -1;
-	}
 
-	return 0;
-}
-
-int Strcpy(uint8_t a[], uint8_t b[], int size) {
-	for (int i = 0; i < size; i++) {
-		a[i] = b[i];
-	}
-
-	return 0;
-}
 void block::blockcpy(Node& src, Node& dst) {
 	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
 		dst.hmac[i] = src.hmac[i];
@@ -56,7 +41,7 @@ block::block() {
 int block::add(uint8_t data[], uint32_t timestamp) {
 
 #ifdef DEBUG
-	printf("data: %s, node: %d\n", data, next_node);
+	printf("\n=================\ndata: %s, timestamp: %d\n", data, timestamp);
 #endif // DEBUG
 
 
@@ -74,7 +59,7 @@ int block::add(uint8_t data[], uint32_t timestamp) {
 	tree[next_node].timestamp = timestamp;
 
 #ifdef DEBUG
-	printf("node(%d): %s\n=================\n", next_node, tree[next_node].hmac);
+	printf("insert hash(%d): ", next_node); print_hash(tree[next_node].hmac);
 #endif // DEBUG
 
 	next_node++;
@@ -96,7 +81,7 @@ void block::build_m_tree() {
 		rear = makenode * 2 + 2;
 
 #ifdef DEBUG
-		printf("\n=============\nmakenode: %d\n", makenode);
+		printf("\n=============\nbuild node: %d\n", makenode);
 #endif // DEBUG
 
 		for (int i = 0; i < SHA256_DIGEST_VALUELEN * 2; i++) {
@@ -112,12 +97,9 @@ void block::build_m_tree() {
 		setHmac(tree[makenode], digest);
 		tree[makenode].timestamp = 0;
 #ifdef DEBUG
-		printf("digest: %s\n", tree[makenode].hmac);
+		printf("digest: "); print_hash(digest);
 
 #endif // DEBUG
-
-
-
 		makenode -= 1;
 
 		//to test
@@ -158,7 +140,6 @@ int block::search(uint32_t timestamp) {
 
 // 위변조 검증
 int block::verify(uint32_t timestamp, uint8_t data[]) {
-	printf("timestamp: %d data %s start!\n",timestamp,data);
 	int idx = search(timestamp);
 	
 	if (idx == -1) {
@@ -175,7 +156,8 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 	if (Strcmp(digest, tree[(DATA_NUM - 1) + idx].hmac, SHA256_DIGEST_VALUELEN)) {
 
 #ifdef DEBUG
-		printf("digest: %s, tree[%d]: %s\n", digest, idx, tree[(DATA_NUM - 1) + idx].hmac);
+		printf("digest: %s, tree[%d]: ", digest, idx);
+		print_hash(tree[(DATA_NUM - 1) + idx].hmac);
 #endif // DEBUG
 
 		return -1;
@@ -206,8 +188,13 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 		SHA256_Encrpyt(hash_concat, SHA256_DIGEST_VALUELEN * 2, digest);
 #ifdef DEBUG
-		printf("front(%d): %s, rear(%d): %s\n", front, tree[front].hmac, rear, tree[rear].hmac);
-		printf("concat: %s\n", hash_concat);
+		printf("\n========================================\n");
+		printf("front(%d): ", front);
+		print_hash(tree[front].hmac);
+		printf("rear(%d): ", rear);
+		print_hash(tree[rear].hmac);
+		printf("concat: ");
+		print_hash(hash_concat,SHA256_DIGEST_VALUELEN*2);
 #endif // DEBUG
 
 
@@ -217,15 +204,18 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 			printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
 			return -1;
 		}
-
+#ifdef DEBUG
+		printf("digest: ");
+		print_hash(digest);
+		printf("tree[%d]: ",cur);
+		print_hash(tree[cur].hmac);
+#endif // DEBUG
 		if (!cur) break;
 	}
 
 	//root 값과 비교
 	if (Strcmp(digest, merkle_root, SHA256_DIGEST_VALUELEN)) {
-#ifdef DEBUG
-		printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
-#endif // DEBUG
+
 
 
 		return -1;
@@ -335,7 +325,9 @@ void block:: makehash(uint8_t result[]) {
 
 	SHA256_Encrpyt(content, SHA256_DIGEST_VALUELEN + 4, result);
 #ifdef DEBUG
-	printf("block hash %s\n", result);
+	printf("\n***********************\nblock hash: ");
+	print_hash(result);
+	printf("\n***********************\n");
 #endif // DEBUG
 
 

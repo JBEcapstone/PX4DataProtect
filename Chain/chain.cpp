@@ -46,7 +46,6 @@ void chain::chain_import(const char filename[]) {
 	}
 
 	fclose(fp);
-	printf("hello\n");
 }
 
 void chain::chain_export(const char filename[]) {
@@ -88,38 +87,38 @@ int chain::verify(uint32_t timestamp, uint8_t data[]) {
 #ifdef DEBUG
 		printf("timestamp: %d\n", cur->prev->b.getTimeStamp());
 #endif		
-		
+
 		trace = cur;
 		cur = cur->prev;
-		if(cur == NULL)
-			printf("cu\n");
-	}
-	printf("탈출!\n");
-	//leaf block이 아닐 때 
-	if (cur == leaf || cur == genesis) {
+		//leaf block이 아닐 때 
+		if (cur == leaf) {
 
-	}
-	else{
-		//다음 블럭에서 해시값 가져오기
-		trace->b.getPrevHash(prevHash);
+		}
+		else {
+			//다음 블럭에서 해시값 가져오기
+			trace->b.getPrevHash(prevHash);
 
-		//현재 블럭 해시하기
-		cur->b.makehash(curHash);
+			//현재 블럭 해시하기
+			cur->b.makehash(curHash);
 
 #ifdef DEBUG
-		printf("previous hash: %s, cur Hash: %s\n", prevHash, curHash);
+			printf("previous hash:");
+			print_hash(prevHash);
+			printf("current Hash: ");
+			print_hash(curHash);
 #endif // DEBUG
 
-		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
-			printf("prev:%c, cur: %c\n", prevHash[i], curHash[i]);
-			if (prevHash[i] != curHash[i]) {
-				printf("%d\n", strcmp((char*)prevHash, (char*)curHash));
-				printf("블럭의 해시값이 다릅니다.\n");
-				return -1;
+			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+				if (prevHash[i] != curHash[i]) {
+					printf("%d\n", strcmp((char*)prevHash, (char*)curHash));
+					printf("블럭의 해시값이 다릅니다.\n");
+					return -1;
+				}
+				
 			}
+			printf("블럭의 해시값이 일치합니다.\n");
 		}
-
 	}
-	printf("target timestamp: %d\n", cur->b.getTimeStamp());
+	
 	return cur->b.verify(timestamp, data);
 }

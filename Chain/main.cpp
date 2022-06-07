@@ -2,38 +2,41 @@
 #include "block.h"
 #include "chain.h"
 
+int time = 102341234;
 uint8_t *data[514];
 int main()
 {
-   chain c;
-   //
-  c.chain_import("test");
-  /* for (int i = 0; i <= 514; i++) {
-        data[i] = (uint8_t*)malloc(sizeof(uint8_t) * 10);
-        for (int j = 0; j < 10; j++) {
-            if (j == 9)data[i][j] = '\0';
-            else data[i][j] = 97 + (i * j) % 26;
-        }
-
-        c.add(data[i], i + 1);
-    }
-   printf("??\n");*/
-
-  uint8_t data2[10];
-  for (int j = 0; j < 10; j++) {
-      if (j == 9)data[j] = '\0';
-      else data2[j] = (uint8_t)(97 + (121 * j) % 26);
-  }
-
-    printf("검증 결과: %d\n",c.verify(122, data2));
-
-
-    int a;
-    scanf_s("\%d\n", &a);
-    c.chain_export("test");
+       chain c;
    
+     
+      for (int i = 0; i <= 514; i++) {
+            data[i] = (uint8_t*)malloc(sizeof(uint8_t) * 10);
+            for (int j = 0; j < 10; j++) {
+                if (j == 9)data[i][j] = '\0';
+                else data[i][j] = 97 + (i * j) % 26;
+            }     
+            
+            c.add(data[i], time+i);
+      }
 
-    scanf_s("\%d\n", &a);
+      uint8_t data2[10];
+      for (int j = 0; j < 10; j++) {
+          if (j == 9)data[j] = '\0';
+          else data2[j] = (uint8_t)(97 + (121 * j) % 26);
+      }
+
+      int a;
+     
+
+    printf("검증 결과: %d\n",c.verify(time+121, data[121]));
+
+    scanf_s("%d\n", &a);
+    //
+    //scanf_s("\%d\n", &a);
+    //c.chain_export("test");
+    //c.chain_import("test");
+
+    
     /*
     uint8_t nisemono[10] = { 'a','b','c','d','e','f','g','h','f','\0' };
 

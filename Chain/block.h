@@ -4,7 +4,7 @@
 #include<string.h>
 #include<stdio.h>
 #include "..\tools\KISA_SHA256.h"
-
+#include "..\tools\tools.h"
 
 #pragma pack(push, 1)
 struct Node {

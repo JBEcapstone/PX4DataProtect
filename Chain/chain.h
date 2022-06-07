@@ -2,7 +2,7 @@
 
 #include<stdint.h>
 #include"block.h"
-
+#include "..\tools\tools.h"
 #define DEBUG 1
 
 struct chain_node {
