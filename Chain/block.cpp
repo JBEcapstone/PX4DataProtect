@@ -9,6 +9,14 @@ int Strcmp(uint8_t a[], uint8_t b[], int size) {
 
 	return 0;
 }
+
+int Strcpy(uint8_t a[], uint8_t b[], int size) {
+	for (int i = 0; i < size; i++) {
+		a[i] = b[i];
+	}
+
+	return 0;
+}
 void block::blockcpy(Node& src, Node& dst) {
 	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
 		dst.hmac[i] = src.hmac[i];
@@ -150,18 +158,20 @@ int block::search(uint32_t timestamp) {
 
 // 위변조 검증
 int block::verify(uint32_t timestamp, uint8_t data[]) {
-
+	printf("timestamp: %d data %s start!\n",timestamp,data);
 	int idx = search(timestamp);
+	
 	if (idx == -1) {
 		return 0;
 	}
 	uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
 	uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
-
+	
 	//우선 리프 노드 해시값 확인
 	SHA256_Encrpyt(data, sizeof(data) / sizeof(uint8_t), digest);
+	printf("dsfsadfsa\n");
 	digest[SHA256_DIGEST_VALUELEN] = '\0';
-
+	
 	if (Strcmp(digest, tree[(DATA_NUM - 1) + idx].hmac, SHA256_DIGEST_VALUELEN)) {
 
 #ifdef DEBUG
@@ -170,7 +180,7 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 		return -1;
 	}
-
+	
 	//트리 거슬러 올라가며 확인
 	int front, rear, cur = (DATA_NUM - 1) + idx;
 
@@ -225,6 +235,7 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 }
 
 int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
+	Node* sess;
 	if ((sess = (Node*)malloc(sizeof(Node) * treesize)) != NULL) {
 		
 	}
@@ -302,7 +313,7 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 		return -1;
 	}
 
-	delete[] sess;
+	free(sess);
 	return 1;
 
 }
@@ -323,6 +334,10 @@ void block:: makehash(uint8_t result[]) {
 	}
 
 	SHA256_Encrpyt(content, SHA256_DIGEST_VALUELEN + 4, result);
+#ifdef DEBUG
+	printf("block hash %s\n", result);
+#endif // DEBUG
+
 
 }
 
@@ -345,35 +360,45 @@ int block::write_file(FILE *fp) {
 		uint8_t previous_hash[SHA256_DIGEST_VALUELEN];
 		uint8_t *merkle_root;
 	*/
-	fwrite(&block_timestamp, sizeof(uint32_t), 1, fp);
-	fwrite(&previous_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
-	fwrite(&merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
-	for (int i = 0; i < DATA_NUM; i++) {
+	fwrite((void *) & block_timestamp, sizeof(uint32_t), 1, fp);
+	fwrite((void *) & previous_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	fwrite((void *) & merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+#ifdef DEBUG
+	printf("timestamp: %d, prev hash: %s, merkle root: %s, tree root: %s\n", block_timestamp, previous_hash, merkle_root, tree[0].hmac);
+#endif // DEBUG
+
+	for (int i = 0; i < treesize; i++) {
 		fwrite((void *)&tree[i], sizeof(Node), 1, fp);
 	}
 	return 0;
 }
 
-int block::read_file(FILE* fp) {
-	uint32_t read_timestamp;
-	uint8_t read_prev_hash[SHA256_DIGEST_VALUELEN];
-	uint8_t read_merkle_root[SHA256_DIGEST_VALUELEN];
-	sess = (Node*)malloc(sizeof(Node) * treesize);
+int block::read_file(FILE* &fp) {
 
-	
-	fread(&read_timestamp, sizeof(uint32_t), 1, fp);
-	fread(&read_prev_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
-	fread(&read_merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
-	for (int i = 0; i < DATA_NUM; i++) {
-		fread((void*)&sess[i], sizeof(Node), 1, fp);
+	printf("world\n");
+	fread((void *)  &block_timestamp, sizeof(uint32_t), 1, fp);
+	fread((void *)  &previous_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	fread((void *) &merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	if (feof(fp)) return -1;
+	printf("%d!\n",treesize);
+	printf("timestamp: %d, prev hash: %s, merkle root: %s\n", block_timestamp, previous_hash, merkle_root);
+	for (int i = 0; i < treesize; i++) {
+		if (&tree[i] == NULL) {
+			printf("failed to get tree[%d]\n", i);
+		}
+		else {
+			printf("read start!!\n");
+		}
+		fread((void*)&tree[i], sizeof(tree[i]), 1, fp);
+		printf("tree[%d]: %s, timestamp: %d\n", i, tree[i].hmac,tree[i].timestamp);
 
-#ifdef DEBUG
-		printf("match in %d: %d\n", i,Strcmp(sess[i].hmac, tree[i].hmac, SHA256_DIGEST_VALUELEN));
-#endif
 	}
-
-	printf("timestamp: %d, prev hash: %s, merkle root: %s, sess root: %s\n", read_timestamp, read_prev_hash, read_merkle_root, sess[0].hmac);
 	
+	//블록 정보인 block_timestamp 정의
+	block_timestamp = tree[treesize - 1].timestamp;
+#ifdef DEBUG
+	printf("timestamp: %d, prev hash: %s, merkle root: %s, tree root: %s, timestamp: %d\n", block_timestamp, previous_hash, merkle_root, tree[0].hmac,block_timestamp);
+#endif
 	return 0;
 		
 } 

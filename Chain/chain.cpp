@@ -1,7 +1,10 @@
 #include "chain.h"
 
 chain::chain() {
-	leaf = (chain_node*)malloc(sizeof(chain_node));
+	if ((leaf = (chain_node*)malloc(sizeof(chain_node))) == NULL) {
+		printf("chain_node 할당 실패\n");
+		return;
+	}
 	leaf->b = block();
 	leaf->prev = NULL;
 	genesis = leaf;
@@ -9,15 +12,41 @@ chain::chain() {
 
 void chain::chain_import(const char filename[]) {
 	fp = fopen(filename, "rb");
-
-	cur = leaf->prev;
-	while (cur != NULL) {
-
-		cur->b.read_file(fp);
-		cur = cur->prev;
+	chain_node* get_node;
+	cur = NULL;
+	while (!feof(fp)) {
+		
+		if ((get_node = (chain_node*)malloc(sizeof(chain_node))) == NULL) {
+			printf("chain_node 할당에 실패하였습니다.\n");
+			break;
+		}
+		else {
+			get_node->b = block();
+		}
+		if (get_node->b.read_file(fp) == -1) {
+			printf("불러오기에 실패하였습니다.\n");
+			
+			break;
+		}
+		else {
+			get_node->prev = NULL;
+		}
+		
+		if (cur != NULL) {
+			cur->prev = get_node;
+			printf("prev timestamp: %d\n", get_node->b.getTimeStamp());
+			
+		}
+		else {
+			leaf->prev = get_node;
+			
+		}
+		cur = get_node;
+		genesis = cur;
 	}
 
 	fclose(fp);
+	printf("hello\n");
 }
 
 void chain::chain_export(const char filename[]) {
@@ -51,21 +80,26 @@ void chain::add(uint8_t data[], uint32_t timestamp) {
 int chain::verify(uint32_t timestamp, uint8_t data[]) {
 	chain_node* trace = NULL;
 	uint8_t prevHash[SHA256_DIGEST_VALUELEN], curHash[SHA256_DIGEST_VALUELEN];
-	cur = leaf;
+	trace = leaf;
+	cur = leaf->prev;
 
-	while (cur->prev != NULL && cur->prev->b.getTimeStamp() > timestamp) {
-
+	while (1) {
+		if ((cur->prev != NULL && (cur->prev->b.getTimeStamp() < timestamp)) || cur->prev == NULL) break;
 #ifdef DEBUG
 		printf("timestamp: %d\n", cur->prev->b.getTimeStamp());
 #endif		
-
+		
 		trace = cur;
 		cur = cur->prev;
+		if(cur == NULL)
+			printf("cu\n");
+	}
+	printf("탈출!\n");
+	//leaf block이 아닐 때 
+	if (cur == leaf || cur == genesis) {
 
 	}
-	//leaf block이 아닐 때 
-	if (trace != leaf) {
-
+	else{
 		//다음 블럭에서 해시값 가져오기
 		trace->b.getPrevHash(prevHash);
 
@@ -77,6 +111,7 @@ int chain::verify(uint32_t timestamp, uint8_t data[]) {
 #endif // DEBUG
 
 		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+			printf("prev:%c, cur: %c\n", prevHash[i], curHash[i]);
 			if (prevHash[i] != curHash[i]) {
 				printf("%d\n", strcmp((char*)prevHash, (char*)curHash));
 				printf("블럭의 해시값이 다릅니다.\n");
@@ -85,6 +120,6 @@ int chain::verify(uint32_t timestamp, uint8_t data[]) {
 		}
 
 	}
-
+	printf("target timestamp: %d\n", cur->b.getTimeStamp());
 	return cur->b.verify(timestamp, data);
 }

@@ -6,6 +6,14 @@
 #include "..\tools\KISA_SHA256.h"
 
 
+#pragma pack(push, 1)
+struct Node {
+	uint32_t timestamp;
+	uint8_t hmac[SHA256_DIGEST_VALUELEN + 1];
+};
+#pragma pack(pop) 
+
+
 const int DATA_NUM = 256;
 const int TIMESET = 100;
 
@@ -14,13 +22,7 @@ const int TIMESET = 100;
 class block
 {
 public:
-	#pragma pack(push, 1)
-	struct Node {
-		uint32_t timestamp;
-		uint8_t hmac[SHA256_DIGEST_VALUELEN + 1];
-	};
-	#pragma pack(pop) 
-
+	
 	block();
 
 	/*
@@ -44,7 +46,7 @@ public:
 		위변조 검증(구간)
 		@input:		시작 timestamp, 끝 timestamp
 		@output:	1  위변조가 검출되지 않았을 경우
-					-1 위변조가 검출되었을 경우
+					-1 위변조가 검출되었을 경우 
 	*/
 
 	int verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]);
@@ -57,7 +59,7 @@ public:
 		
 	*/
 	int write_file(FILE *fp);
-	int read_file(FILE* fp);
+	int read_file(FILE* &fp);
 	void makehash(uint8_t result[]);
 	void setPrevHash(uint8_t h[]);
 	uint32_t getTimeStamp() { return block_timestamp; };
@@ -67,7 +69,7 @@ public:
 
 private:
 	// tree: tree의 노드값, sess: 임시 트리
-	Node* tree, * sess;
+	Node* tree;
 
 	//treesize: tree 크기, next_node: tree 구성시 다음으로 추가될 노드 인덱스
 	int treesize, next_node;

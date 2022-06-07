@@ -4,12 +4,14 @@
 #include"block.h"
 
 #define DEBUG 1
+
+struct chain_node {
+	block b;
+	chain_node* prev = NULL;
+};
 class chain
 {
-	struct chain_node {
-		block b;
-		chain_node* prev = NULL;
-	};
+	
 public:
 
 	chain();
