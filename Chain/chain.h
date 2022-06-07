@@ -18,7 +18,7 @@ public:
 		@input: filename
 		@output: -
 	*/
-	void chain_import();
+	void chain_import(const char filename[]);
 
 	/*
 		체인을 file로 export 한다.

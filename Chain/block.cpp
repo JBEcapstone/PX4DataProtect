@@ -1,6 +1,14 @@
 #include "block.h"
-//#define DEBUG  1;
+#define DEBUG  1;
 
+int Strcmp(uint8_t a[], uint8_t b[], int size) {
+	for (int i = 0; i < size; i++) {
+		if (a[i] > b[i]) return 1;
+		else if (a[i] < b[i]) return -1;
+	}
+
+	return 0;
+}
 void block::blockcpy(Node& src, Node& dst) {
 	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
 		dst.hmac[i] = src.hmac[i];
@@ -108,8 +116,9 @@ void block::build_m_tree() {
 		//if (makenode != 127) break;
 	}
 
-	merkle_root = tree[0].hmac;
-
+	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+		merkle_root[i] = tree[0].hmac[i];
+	}
 }
 
 //노드 찾기
@@ -153,7 +162,7 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 	SHA256_Encrpyt(data, sizeof(data) / sizeof(uint8_t), digest);
 	digest[SHA256_DIGEST_VALUELEN] = '\0';
 
-	if (strcmp((char*)digest, (char*)tree[(DATA_NUM - 1) + idx].hmac)) {
+	if (Strcmp(digest, tree[(DATA_NUM - 1) + idx].hmac, SHA256_DIGEST_VALUELEN)) {
 
 #ifdef DEBUG
 		printf("digest: %s, tree[%d]: %s\n", digest, idx, tree[(DATA_NUM - 1) + idx].hmac);
@@ -194,7 +203,7 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 		digest[SHA256_DIGEST_VALUELEN] = '\0';
 
-		if (strcmp((char*)digest, (char*)tree[cur].hmac)) {
+		if (Strcmp(digest, tree[cur].hmac, SHA256_DIGEST_VALUELEN)) {
 			printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
 			return -1;
 		}
@@ -203,7 +212,7 @@ int block::verify(uint32_t timestamp, uint8_t data[]) {
 	}
 
 	//root 값과 비교
-	if (strcmp((char*)digest, (char*)merkle_root)) {
+	if (Strcmp(digest, merkle_root, SHA256_DIGEST_VALUELEN)) {
 #ifdef DEBUG
 		printf("digest: %s, tree[%d]: %s\n", digest, cur, tree[cur].hmac);
 #endif // DEBUG
@@ -285,7 +294,7 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 	}
 		
 	// root 값과 비교
-	if (strcmp((char*)sess[0].hmac, (char*)merkle_root)) {
+	if (Strcmp(sess[0].hmac, merkle_root, SHA256_DIGEST_VALUELEN)) {
 #ifdef DEBUG
 		printf("merkle root: %s, sess[0]: %s\n", merkle_root, sess[0].hmac);
 #endif // DEBUG
@@ -329,3 +338,42 @@ void block::getPrevHash(uint8_t result[]) {
 		result[i] = previous_hash[i];
 	}
 }
+
+int block::write_file(FILE *fp) {
+	/*
+		uint32_t block_timestamp = -1; 
+		uint8_t previous_hash[SHA256_DIGEST_VALUELEN];
+		uint8_t *merkle_root;
+	*/
+	fwrite(&block_timestamp, sizeof(uint32_t), 1, fp);
+	fwrite(&previous_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	fwrite(&merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	for (int i = 0; i < DATA_NUM; i++) {
+		fwrite((void *)&tree[i], sizeof(Node), 1, fp);
+	}
+	return 0;
+}
+
+int block::read_file(FILE* fp) {
+	uint32_t read_timestamp;
+	uint8_t read_prev_hash[SHA256_DIGEST_VALUELEN];
+	uint8_t read_merkle_root[SHA256_DIGEST_VALUELEN];
+	sess = (Node*)malloc(sizeof(Node) * treesize);
+
+	
+	fread(&read_timestamp, sizeof(uint32_t), 1, fp);
+	fread(&read_prev_hash, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	fread(&read_merkle_root, sizeof(uint8_t) * SHA256_DIGEST_VALUELEN, 1, fp);
+	for (int i = 0; i < DATA_NUM; i++) {
+		fread((void*)&sess[i], sizeof(Node), 1, fp);
+
+#ifdef DEBUG
+		printf("match in %d: %d\n", i,Strcmp(sess[i].hmac, tree[i].hmac, SHA256_DIGEST_VALUELEN));
+#endif
+	}
+
+	printf("timestamp: %d, prev hash: %s, merkle root: %s, sess root: %s\n", read_timestamp, read_prev_hash, read_merkle_root, sess[0].hmac);
+	
+	return 0;
+		
+} 

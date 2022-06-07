@@ -49,6 +49,15 @@ public:
 
 	int verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]);
 
+	/*
+		블럭을 file에 write
+		@input:		fp	file descriptor 의 주소
+		@output:	1	입력 성공
+					-1	입력 실패
+		
+	*/
+	int write_file(FILE *fp);
+	int read_file(FILE* fp);
 	void makehash(uint8_t result[]);
 	void setPrevHash(uint8_t h[]);
 	uint32_t getTimeStamp() { return block_timestamp; };
@@ -71,7 +80,7 @@ private:
 	*/
 	uint32_t block_timestamp = -1; 
 	uint8_t previous_hash[SHA256_DIGEST_VALUELEN];
-	uint8_t *merkle_root;
+	uint8_t merkle_root[SHA256_DIGEST_VALUELEN];
 
 	//해시를 위한 구조체
 	SHA256_INFO sha;

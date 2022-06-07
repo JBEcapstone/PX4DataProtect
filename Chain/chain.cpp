@@ -7,12 +7,30 @@ chain::chain() {
 	genesis = leaf;
 }
 
-void chain::chain_import() {
+void chain::chain_import(const char filename[]) {
+	fp = fopen(filename, "rb");
 
+	cur = leaf->prev;
+	while (cur != NULL) {
+
+		cur->b.read_file(fp);
+		cur = cur->prev;
+	}
+
+	fclose(fp);
 }
 
 void chain::chain_export(const char filename[]) {
 	fp = fopen(filename, "wb");
+
+	cur = leaf->prev;
+	while (cur != NULL) {
+
+		cur->b.write_file(fp);
+		cur = cur->prev;
+	}
+
+	fclose(fp);
 }
 
 void chain::add(uint8_t data[], uint32_t timestamp) {
