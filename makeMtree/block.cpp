@@ -1,7 +1,23 @@
 #include "block.h"
 //#define DEBUG  1;
-block::block() {
 
+void block::blockcpy(Node& src, Node& dst) {
+	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+		dst.hmac[i] = src.hmac[i];
+	}
+
+	dst.hmac[SHA256_DIGEST_VALUELEN] = '\0';
+	dst.timestamp = src.timestamp;
+}
+
+void block::setHmac(Node& n, uint8_t mac[]) {
+	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+		n.hmac[i] = mac[i];
+	}
+	n.hmac[SHA256_DIGEST_VALUELEN] = '\0';
+}
+
+block::block() {
 	//트리 크기 설정
 	int sum = DATA_NUM;
 	treesize = 0;
@@ -37,25 +53,14 @@ int block::add(uint8_t data[], uint32_t timestamp) {
 	uint8_t* enc = (uint8_t*)malloc(sizeof(uint8_t) * (SHA256_DIGEST_VALUELEN + 1));
 	SHA256_Encrpyt(data, sizeof(data) / sizeof(uint8_t), enc);
 	enc[SHA256_DIGEST_VALUELEN] = '\0';
-	//printf("plain:%s, hmac: %s\n",data, enc);
 
-	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
-		tree[next_node].hmac[i] = enc[i];
-	}
-
-	tree[next_node].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+	setHmac(tree[next_node], enc);
 	tree[next_node].timestamp = timestamp;
 
 #ifdef DEBUG
 	printf("node(%d): %s\n=================\n", next_node, tree[next_node].hmac);
 #endif // DEBUG
 
-
-	/*for (int i = 0; i < 32; i++) {
-		printf("(%d) %c", i, enc[i]);
-	}
-	printf("\n");*/
-	//free(enc);
 	next_node++;
 	return 1;
 
@@ -67,6 +72,8 @@ void block::build_m_tree() {
 	uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
 	uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
 
+	//블록 정보인 block_timestamp 정의
+	block_timestamp = tree[treesize - 1].timestamp;
 	while (makenode >= 0) {
 
 		front = makenode * 2 + 1;
@@ -76,24 +83,17 @@ void block::build_m_tree() {
 		printf("\n=============\nmakenode: %d\n", makenode);
 #endif // DEBUG
 
-
-		//printf("front(%d): %s, rear(%d): %s\n", front,tree[front].hmac, rear,tree[rear].hmac);
-
 		for (int i = 0; i < SHA256_DIGEST_VALUELEN * 2; i++) {
 			if (i < SHA256_DIGEST_VALUELEN) hash_concat[i] = tree[front].hmac[i];
 			else hash_concat[i] = tree[rear].hmac[i - SHA256_DIGEST_VALUELEN];
 		}
 
 		hash_concat[SHA256_DIGEST_VALUELEN * 2] = '\0';
-		//printf("hash_concat:%s \n", hash_concat);
 
 		SHA256_Encrpyt(hash_concat, 64, digest);
 		digest[SHA256_DIGEST_VALUELEN] = '\0';
 
-		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
-			tree[makenode].hmac[i] = digest[i];
-		}
-		tree[makenode].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+		setHmac(tree[makenode], digest);
 		tree[makenode].timestamp = 0;
 #ifdef DEBUG
 		printf("digest: %s\n", tree[makenode].hmac);
@@ -132,7 +132,6 @@ int block::search(uint32_t timestamp) {
 			printf("mid: %d\n", mid);
 #endif // DEBUG
 
-
 			return mid - (DATA_NUM - 1);
 		}
 	}
@@ -144,6 +143,9 @@ int block::search(uint32_t timestamp) {
 int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 	int idx = search(timestamp);
+	if (idx == -1) {
+		return 0;
+	}
 	uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
 	uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
 
@@ -237,10 +239,7 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 		SHA256_Encrpyt(data[i-idx_start], sizeof(data[i-idx_start]) / sizeof(uint8_t), digest);
 		digest[SHA256_DIGEST_VALUELEN] = '\0';
 
-		for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
-			sess[idx].hmac[i] = digest[i];
-		}
-		sess[idx].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+		setHmac(sess[idx], digest);
 		sess[idx].timestamp = 0;
 #ifdef DEBUG
 		printf("idx: %d, digest: %s\n", idx,sess[idx].hmac);
@@ -253,14 +252,12 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 	while (front && rear) {
 		if (front % 2) front = (front - 1) / 2;
 		else {
-			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++)sess[front-1].hmac[i] = tree[front-1].hmac[i];
-			sess[front - 1].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+			blockcpy(tree[front - 1], sess[front - 1]);
 			front = (front - 2) / 2;
 		}
 
 		if (rear % 2) {
-			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++)sess[rear + 1].hmac[i] = tree[rear + 1].hmac[i];
-			sess[rear + 1].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+			blockcpy(tree[rear + 1], sess[rear + 1]);
 			rear = (rear - 1) / 2;
 		}
 		else rear = (rear - 2) / 2;
@@ -280,13 +277,7 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 			printf("concat: %s\n", hash_concat);
 #endif // DEBUG
 
-
-			
-
-			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
-				sess[cur].hmac[i] = digest[i];
-			}
-			sess[cur].hmac[SHA256_DIGEST_VALUELEN] = '\0';
+			setHmac(sess[cur], digest);
 			sess[cur].timestamp = 0;
 
 		}
@@ -301,9 +292,40 @@ int block::verify(uint32_t time_start, uint32_t time_end, uint8_t* data[]) {
 		delete[] sess;
 		return -1;
 	}
+
 	delete[] sess;
 	return 1;
-	
 
-	
+}
+
+void block:: makehash(uint8_t result[]) {
+	uint8_t content[SHA256_DIGEST_VALUELEN * 2 + 4];
+	content[0] = block_timestamp & (0b11111111);
+	content[1] = (block_timestamp & ((0b11111111) << 8)) / (0b11111111);
+	content[2] = (block_timestamp & ((0b11111111) << 16)) / (0b11111111);
+	content[3] = (block_timestamp & ((0b11111111) << 24)) / (0b11111111);
+
+	for (int i = 4; i < SHA256_DIGEST_VALUELEN + 4; i++) {
+		content[i] = previous_hash[i - 4];
+	}
+
+	for (int i = SHA256_DIGEST_VALUELEN + 4; i < 2 * SHA256_DIGEST_VALUELEN + 4; i++) {
+		content[i] = merkle_root[i - SHA256_DIGEST_VALUELEN - 4];
+	}
+
+	SHA256_Encrpyt(content, SHA256_DIGEST_VALUELEN + 4, result);
+
+}
+
+void block::setPrevHash(uint8_t h[]) {
+	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+		previous_hash[i] = h[i];
+	}
+	previous_hash[SHA256_DIGEST_VALUELEN] = '\0';
+}
+
+void block::getPrevHash(uint8_t result[]) {
+	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+		result[i] = previous_hash[i];
+	}
 }
