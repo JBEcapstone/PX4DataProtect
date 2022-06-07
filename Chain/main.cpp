@@ -16,7 +16,9 @@ int main()
         c.add(data[i], i + 1);
     }
 
-    printf("검증 결과: %d\n",c.verify(410, data[429]));
+    printf("검증 결과: %d\n",c.verify(430, data[429]));
+    int a;
+    scanf_s("\%d\n", & a);
 
 
     /*

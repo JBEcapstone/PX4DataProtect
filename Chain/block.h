@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include<string.h>
 #include<stdio.h>
-#include "KISA_SHA256.h"
+#include "..\tools\KISA_SHA256.h"
 
 
 const int DATA_NUM = 256;
@@ -14,10 +14,12 @@ const int TIMESET = 100;
 class block
 {
 public:
+	#pragma pack(push, 1)
 	struct Node {
 		uint32_t timestamp;
 		uint8_t hmac[SHA256_DIGEST_VALUELEN + 1];
 	};
+	#pragma pack(pop) 
 
 	block();
 
