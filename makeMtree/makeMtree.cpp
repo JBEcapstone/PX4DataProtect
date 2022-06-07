@@ -2,11 +2,11 @@
 #include "block.h"
 #include "chain.h"
 
-uint8_t *data[257];
+uint8_t *data[600];
 int main()
 {
    chain c;
-    for (int i = 0; i <= 256; i++) {
+    for (int i = 0; i <= 600; i++) {
         data[i] = (uint8_t*)malloc(sizeof(uint8_t) * 10);
         for (int j = 0; j < 10; j++) {
             if (j == 9)data[i][j] = '\0';
@@ -15,6 +15,8 @@ int main()
 
         c.add(data[i], i + 1);
     }
+
+    printf("검증 결과: %d\n",c.verify(410, data[429]));
 
 
     /*

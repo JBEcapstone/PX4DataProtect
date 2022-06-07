@@ -2,17 +2,20 @@
 
 #include<stdint.h>
 #include"block.h"
+
+#define DEBUG 1
 class chain
 {
 	struct chain_node {
 		block b;
-		chain_node* prev;
+		chain_node* prev = NULL;
 	};
 public:
 
 	chain() {
 		leaf = (chain_node *)malloc(sizeof(chain_node));
 		leaf->b = block();
+		leaf->prev = NULL;
 		genesis = leaf;
 	}
 	/*
@@ -58,22 +61,36 @@ public:
 		cur = leaf;
 		
 		while (cur->prev != NULL && cur->prev->b.getTimeStamp() > timestamp) {
+
+#ifdef DEBUG
+			printf("timestamp: %d\n", cur->prev->b.getTimeStamp());
+#endif		
+			
 			trace = cur;
 			cur = cur->prev;
+
 		}
-		
-		//genesis block이 아닐 때 
-		if (cur->prev != NULL) {
+		//leaf block이 아닐 때 
+		if (trace != leaf) {
 
 			//다음 블럭에서 해시값 가져오기
 			trace->b.getPrevHash(prevHash);
 
 			//현재 블럭 해시하기
 			cur->b.makehash(curHash);
-			if (strcmp((char*)prevHash, (char*)curHash)) {
-				printf("블럭의 해시값이 다릅니다.\n");
-				return -1;
+
+#ifdef DEBUG
+			printf("previous hash: %s, cur Hash: %s\n", prevHash, curHash);
+#endif // DEBUG
+
+			for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
+				if (prevHash[i] !=  curHash[i]) {
+					printf("%d\n", strcmp((char*)prevHash, (char*)curHash));
+					printf("블럭의 해시값이 다릅니다.\n");
+					return -1;
+				}
 			}
+			
 		}		
 
 		return cur->b.verify(timestamp, data);

@@ -33,6 +33,7 @@ public:
 		위변조 검증
 		@input:		timestamp, data
 		@output:	1  위변조가 검출되지 않았을 경우
+					0	대상 데이터를 찾지 못했을 경우
 					-1 위변조가 검출되었을 경우
 	*/
 	int verify(uint32_t timestamp, uint8_t data[]);

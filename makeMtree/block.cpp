@@ -1,5 +1,5 @@
 #include "block.h"
-#define DEBUG  1;
+//#define DEBUG  1;
 
 void block::blockcpy(Node& src, Node& dst) {
 	for (int i = 0; i < SHA256_DIGEST_VALUELEN; i++) {
@@ -143,6 +143,9 @@ int block::search(uint32_t timestamp) {
 int block::verify(uint32_t timestamp, uint8_t data[]) {
 
 	int idx = search(timestamp);
+	if (idx == -1) {
+		return 0;
+	}
 	uint8_t digest[SHA256_DIGEST_VALUELEN + 1];
 	uint8_t hash_concat[SHA256_DIGEST_VALUELEN * 2 + 1];
 
